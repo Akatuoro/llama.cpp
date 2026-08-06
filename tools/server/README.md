@@ -238,6 +238,8 @@ For the full list of features, please refer to [server's changelog](https://gith
 | `--lora-init-without-apply` | load LoRA adapters without applying them (apply later via POST /lora-adapters) (default: disabled) |
 | `--sleep-idle-seconds SECONDS` | number of seconds of idleness after which the server will sleep (default: -1; -1 = disabled) |
 | `--log-prompts` | Log prompts and generated text to stdout (only used for debugging, default: disabled) |
+| `--log-prompts-file FNAME` | Log prompts and generated text to a file instead of stdout (only used for debugging) |
+| `--log-prompts-colors` | Color token boundaries in prompt logs (requires --log-prompts, default: disabled) |
 | `--log-prompts-dir PATH` | Log prompts to directory (auto-created if not present; only used for debugging, default: disabled) |
 | `--spec-draft-hf, -hfd, -hfrd, --hf-repo-draft <user>/<model>[:quant]` | Same as --hf-repo, but for the draft model (default: unused)<br/>(env: LLAMA_ARG_SPEC_DRAFT_HF_REPO) |
 | `--spec-draft-threads, -td, --threads-draft N` | number of threads to use during generation (default: same as --threads) |

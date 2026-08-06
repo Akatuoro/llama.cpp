@@ -504,7 +504,9 @@ struct common_params {
     std::string input_suffix         = ""; // string to suffix user inputs with                             // NOLINT
     std::string logits_file          = ""; // file for saving *all* logits                                  // NOLINT
     std::string path_prompts_log_dir = ""; // directory with logged prompts                                 // NOLINT
-    bool        log_prompts          = false; // whether to log prompts and generated text to stdout
+    std::string path_prompts_log_file = ""; // file with streamed prompts and generated text                 // NOLINT
+    bool        log_prompts          = false; // whether to log prompts and generated text
+    bool        log_prompts_colors   = false; // whether to color token boundaries in prompt logs
 
     // llama-debug specific options
     std::string logits_output_dir = "data"; // directory for saving logits output files                     // NOLINT

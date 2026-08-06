@@ -3749,6 +3749,21 @@ common_params_context common_params_parser_init(common_params & params, llama_ex
         }
     ).set_examples({LLAMA_EXAMPLE_SERVER}));
     add_opt(common_arg(
+        {"--log-prompts-file"}, "FNAME",
+        "Log prompts and generated text to a file instead of stdout (only used for debugging)",
+        [](common_params & params, const std::string & value) {
+            params.log_prompts = true;
+            params.path_prompts_log_file = value;
+        }
+    ).set_examples({LLAMA_EXAMPLE_SERVER}));
+    add_opt(common_arg(
+        {"--log-prompts-colors"},
+        "Color token boundaries in prompt logs (requires --log-prompts, default: disabled)",
+        [](common_params & params) {
+            params.log_prompts_colors = true;
+        }
+    ).set_examples({LLAMA_EXAMPLE_SERVER}));
+    add_opt(common_arg(
         {"--log-prompts-dir"}, "PATH",
         "Log prompts to directory (auto-created if not present; only used for debugging, default: disabled)",
         [](common_params & params, const std::string & value) {

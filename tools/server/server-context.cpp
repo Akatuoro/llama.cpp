@@ -934,6 +934,9 @@ public:
             // we don't call it again here to avoid double free
             destroy();
         }
+        if (prompts_log != stdout) {
+            fclose(prompts_log);
+        }
     }
 
 private:
@@ -941,6 +944,7 @@ private:
     // use server_context methods instead
 
     common_params params_base;
+    FILE * prompts_log = stdout;
 
     // note: keep these alive - they determine the lifetime of the model, context, etc.
     common_init_result_ptr llama_init;
@@ -1064,6 +1068,15 @@ private:
 
         params_base = params;
         params_base.n_outputs_max = server_n_outputs_max(params_base);
+
+        if (!params_base.path_prompts_log_file.empty() && prompts_log == stdout) {
+            prompts_log = fopen(params_base.path_prompts_log_file.c_str(), "ab");
+            if (prompts_log == nullptr) {
+                SRV_ERR("failed to open prompt log file '%s'\n", params_base.path_prompts_log_file.c_str());
+                prompts_log = stdout;
+                return false;
+            }
+        }
 
         const bool has_mmproj = !params.mmproj.path.empty();
         const bool has_draft = params.speculative.has_dft();
@@ -1858,11 +1871,21 @@ private:
         slot.task = std::make_unique<const server_task>(std::move(task));
 
         if (params_base.log_prompts && slot.task->need_sampling()) {
-            const std::string prompt = slot.task->tokens.detokenize(ctx_tgt, true);
-            fprintf(stdout, "===== PROMPT =====\n");
-            fwrite(prompt.data(), 1, prompt.size(), stdout);
-            fprintf(stdout, "\n===== ASSISTANT =====\n");
-            fflush(stdout);
+            fprintf(prompts_log, "===== PROMPT =====\n");
+            if (params_base.log_prompts_colors) {
+                const llama_tokens tokens = slot.task->tokens.get_text_tokens();
+                for (size_t i = 0; i < tokens.size(); ++i) {
+                    const std::string piece = common_token_to_piece(ctx_tgt, tokens[i], true);
+                    fprintf(prompts_log, "\033[48;5;%dm", i % 2 == 0 ? 236 : 238);
+                    fwrite(piece.data(), 1, piece.size(), prompts_log);
+                    fprintf(prompts_log, "\033[0m");
+                }
+            } else {
+                const std::string prompt = slot.task->tokens.detokenize(ctx_tgt, true);
+                fwrite(prompt.data(), 1, prompt.size(), prompts_log);
+            }
+            fprintf(prompts_log, "\n===== ASSISTANT =====\n");
+            fflush(prompts_log);
         }
 
         slot.state = slot.task->is_child()
@@ -1880,6 +1903,13 @@ private:
         // remember which tokens were sampled - used for repetition penalties during sampling
         const std::string token_str = result.text_to_send;
         slot.sampled = result.tok;
+
+        if (params_base.log_prompts && params_base.log_prompts_colors && !token_str.empty()) {
+            fprintf(prompts_log, "\033[48;5;%dm", slot.n_decoded % 2 == 0 ? 236 : 238);
+            fwrite(token_str.data(), 1, token_str.size(), prompts_log);
+            fprintf(prompts_log, "\033[0m");
+            fflush(prompts_log);
+        }
 
         slot.generated_text += token_str;
         if (slot.task->params.return_tokens) {
@@ -1918,9 +1948,9 @@ private:
                 result.text_to_send = "";
             }
 
-            if (params_base.log_prompts && !result.text_to_send.empty()) {
-                fwrite(result.text_to_send.data(), 1, result.text_to_send.size(), stdout);
-                fflush(stdout);
+            if (params_base.log_prompts && !params_base.log_prompts_colors && !result.text_to_send.empty()) {
+                fwrite(result.text_to_send.data(), 1, result.text_to_send.size(), prompts_log);
+                fflush(prompts_log);
             }
 
             slot.add_token(result);
@@ -2151,8 +2181,8 @@ private:
 
     void send_final_response(server_slot & slot) {
         if (params_base.log_prompts) {
-            fprintf(stdout, "\n===== END =====\n");
-            fflush(stdout);
+            fprintf(prompts_log, "\n===== END =====\n");
+            fflush(prompts_log);
         }
 
         auto res = std::make_unique<server_task_result_cmpl_final>();
