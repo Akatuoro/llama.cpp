@@ -1857,6 +1857,14 @@ private:
 
         slot.task = std::make_unique<const server_task>(std::move(task));
 
+        if (params_base.log_prompts && slot.task->need_sampling()) {
+            const std::string prompt = slot.task->tokens.detokenize(ctx_tgt, true);
+            fprintf(stdout, "===== PROMPT =====\n");
+            fwrite(prompt.data(), 1, prompt.size(), stdout);
+            fprintf(stdout, "\n===== ASSISTANT =====\n");
+            fflush(stdout);
+        }
+
         slot.state = slot.task->is_child()
             ? SLOT_STATE_WAIT_OTHER // wait for the parent to process prompt
             : SLOT_STATE_STARTED;
@@ -1908,6 +1916,11 @@ private:
                 // add the token to slot queue and cache
             } else {
                 result.text_to_send = "";
+            }
+
+            if (params_base.log_prompts && !result.text_to_send.empty()) {
+                fwrite(result.text_to_send.data(), 1, result.text_to_send.size(), stdout);
+                fflush(stdout);
             }
 
             slot.add_token(result);
@@ -2137,6 +2150,11 @@ private:
     }
 
     void send_final_response(server_slot & slot) {
+        if (params_base.log_prompts) {
+            fprintf(stdout, "\n===== END =====\n");
+            fflush(stdout);
+        }
+
         auto res = std::make_unique<server_task_result_cmpl_final>();
 
         res->id      = slot.task->id;
