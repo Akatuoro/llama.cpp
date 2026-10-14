@@ -2000,7 +2000,7 @@ private:
         slot.sampled = result.tok;
 
         if (params_base.log_prompts && params_base.log_prompts_colors && !token_str.empty()) {
-            fprintf(prompts_log, "\033[48;5;%dm", slot.n_decoded % 2 == 0 ? 236 : 238);
+            fprintf(prompts_log, "\033[48;5;%dm", slot.stats.n_gen % 2 == 0 ? 236 : 238);
             fwrite(token_str.data(), 1, token_str.size(), prompts_log);
             fprintf(prompts_log, "\033[0m");
             fflush(prompts_log);
